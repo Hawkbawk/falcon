@@ -5,10 +5,12 @@ import (
 	"os/exec"
 )
 
+// Indicates that a command was unable to be found on the machine's PATH.
 type CommandNotFound struct {
 	message string
 }
 
+// Indicates that a command failed to run.
 type CommandFailed struct {
 	message string
 }
@@ -21,7 +23,10 @@ func (e CommandFailed) Error() string {
 	return e.message
 }
 
-func RunCommand(desiredCommand string, args []string) error {
+// RunCommand runs the specified command with the specified arguments. If it can't find the desired
+// command, it returns a CommandNotFound error. If the command fails, it returns a CommandFailed
+// error.
+func RunCommand(desiredCommand string, args []string, runAsSudo bool) error {
 	execCommand, err := exec.LookPath(desiredCommand)
 
 	if err != nil {

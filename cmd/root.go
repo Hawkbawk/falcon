@@ -23,8 +23,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
@@ -33,9 +34,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "prox",
-	Short: "prox is your friendly local Docker development reverse-proxy",
-	Long: `prox is used as a local reverse-proxy for Docker development. It allows
+	Use:   "falcon",
+	Short: "falcon is your friendly local Docker development reverse-proxy",
+	Long: `falcon is used as a local reverse-proxy for Docker development. It allows
 you and your containers to reach each other using domain names like "your-app.docker".
 It allows for much easier development when using microservices, or even just two services
 that need to communicate.`,
@@ -78,7 +79,7 @@ func initConfig() {
 		// Search config in home directory with name ".prox" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".prox")
+		viper.SetConfigName(".falcon")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
