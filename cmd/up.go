@@ -22,22 +22,41 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"github.com/hawkbawk/falcon/lib/networkmanager"
+	"log"
+
+	"github.com/hawkbawk/falcon/lib/daemon"
+	"github.com/hawkbawk/falcon/lib/networking"
 	"github.com/spf13/cobra"
 )
 
 // upCmd represents the up command
 var upCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Starts up the Traefik and dnsmasq container",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Sets up networking, the proxy container, and the daemon",
+	Long: `falcon up sets up your local networking to point all requests to *.docker to resolve
+to localhost:80. The proxy container (running Traefik) then takes these requests and acts as
+a reverse-proxy, determining to which container the request should go to. The falcon daemon runs
+in the background and automatically adds the proxy container to any Docker networks that get created.
+Note that this command must be run with sudo the first time, or after any calls to 'falcon purge',
+in order to install the daemon.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		networkmanager.EditManagerConfigFile()
+		networking.Configure()
+
+		// TODO: Finish up the falcon-proxy container so we can pull and start it here.
+
+		daemon, err := daemon.NewDaemon()
+
+		if err != nil {
+			log.Fatalln("Unable to create the daemon. This is likely due to a bug. Please see the following error:", err)
+		}
+
+		if err := daemon.Service.Install(); err != nil {
+			log.Fatalln("Unable to install the daemon. Please run again with sudo to install the daemon.")
+		}
+
+		if err := daemon.Service.Start(); err != nil {
+			log.Fatalln("Unable to start the daemon. Please see the following error:", err)
+		}
 	},
 }
 

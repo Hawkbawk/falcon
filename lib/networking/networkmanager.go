@@ -42,9 +42,6 @@ func closeConfigFile(configFile *os.File) {
 // EnableDnsmasq writes the necessary line to the NetworkManager.conf file to enable dnsmasq
 // for the machine.
 func enableDnsmasq(configFile *os.File) {
-
-	defer closeConfigFile(configFile)
-
 	if dnsMasqEnabled(configFile) {
 		return
 	}
@@ -59,10 +56,12 @@ func enableDnsmasq(configFile *os.File) {
 	}
 
 	beforeMain := previousContents[:indices[0]]
+	mainLine := previousContents[indices[0]:indices[1]]
 	afterMain := previousContents[indices[1]:]
 
 	// Copy everything into this new config file, including the line that adds dnsmasq.
 	copy(newConfigFile, beforeMain)
+	copy(newConfigFile, mainLine)
 	copy(newConfigFile, []byte(dnsmasqLine))
 	copy(newConfigFile, afterMain)
 
@@ -72,8 +71,6 @@ func enableDnsmasq(configFile *os.File) {
 // DisableDnsmasq removes the line necessary in NetworkManager.conf to enable dnsmasq for
 // the system.
 func disableDnsmasq(configFile *os.File) {
-	defer closeConfigFile(configFile)
-
 	if !dnsMasqEnabled(configFile) {
 		return
 	}

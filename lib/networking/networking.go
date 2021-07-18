@@ -5,6 +5,7 @@ func Configure() {
 	managerConfigFile := openManagerConfigFile()
 
 	enableDnsmasq(managerConfigFile)
+	closeConfigFile(managerConfigFile)
 	// Move/backup the resolv file, then create the symlink.
 	moveResolvFile()
 	letManagerManageResolv()
@@ -17,6 +18,7 @@ func Configure() {
 func Restore() {
 	managerConfigFile := openManagerConfigFile()
 	disableDnsmasq(managerConfigFile)
+	closeConfigFile(managerConfigFile)
 	// First remove the symlink, then restore the resolv file.
 	stopManagerManagingResolv()
 	restoreResolvFile()

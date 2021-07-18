@@ -1,0 +1,161 @@
+package daemon
+
+import (
+	"context"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/kardianos/service"
+)
+
+// TODO (if possible): I cannot find a way to determine the unique ID of the proxy container.
+// For now though, just using the default name that falcon creates the container under should be
+// alright
+
+const DefaultContainerName = "falcon-proxy"
+
+// ProxySyncer is the responsible for ensuring that the falcon Traefik container stays in sync with
+// all Docker networks on the machine, joining them when they're created and leaving them when
+// they're destroyed. Note that an empty ProxySyncer will NOT work. You must call the `NewProxy`
+// funciton instead.
+type ProxySyncer struct {
+	Client *client.Client
+	Context context.Context
+	CancelFunc context.CancelFunc
+	ContainerID string
+	EventChannel <-chan events.Message
+}
+
+// Creates a new ProxySyncer struct for syncing a container with all Docker networks on a machine.
+// Returns an empty struct and an error if it was unable to construct the Docker client.
+func NewProxySyncer() (ProxySyncer, error) {
+	// The most up-to-date client version as of writing this code. Ensures object shapes and other
+	// such stuff doesn't change on us depending on the user's version of Docker
+	client, err := client.NewClientWithOpts(client.WithVersion("20.10.7"), client.FromEnv)
+	if err != nil {
+		return ProxySyncer{}, nil
+	}
+	context, cancelFunc := context.WithCancel(context.Background())
+	eventChannel, _ := client.Events(context, types.EventsOptions{Filters: createFilters()})
+
+
+	return ProxySyncer{
+		Client: client,
+		Context: context,
+		CancelFunc: cancelFunc,
+		ContainerID: DefaultContainerName,
+		EventChannel: eventChannel,
+	}, nil
+}
+
+// StartSyncing listens to the Docker API for any network changes and either adds or removes the
+// falcon-proxy as necessary, whenever any changes come in.
+func (syncer ProxySyncer) Start(s service.Service) error {
+
+	logger, err := s.Logger(nil)
+
+	if err != nil {
+		return err
+	}
+
+	go syncer.listenForNetworkEvents(logger)
+	return nil
+}
+
+func (syncer ProxySyncer) Stop(s service.Service) error {
+	syncer.CancelFunc()
+	return nil
+}
+
+// TODO When the daemon is first started, it needs to perform an initial sync, in order to
+// add the proxy container to all currently created Docker networks.
+
+// listenForNetworkEvents reads in Docker events from the passed in channel and either adds the proxy
+// to the network, removes the proxy from the network, or does nothing, depending on what's necessary.
+// Note that this method is blocking and will never return, as it is designed to run for perpetuity.
+func (syncer ProxySyncer) listenForNetworkEvents(logger service.Logger) {
+	for {
+		event := <- syncer.EventChannel
+		connectedNetworks, err := syncer.connectedNetworks()
+
+		if err != nil {
+			logger.Error("Unable to read what networks the proxy is connected to. ERROR:", err)
+			continue
+		} else if connectedNetworks[event.Actor.ID] != nil {
+			continue
+		}
+
+		// It's pretty rare for the proxy to either already be a part of a created network or not
+		// already be in a network that was just destroyed, but we should check for it anyways.
+		switch event.Action {
+			case "destroy": {
+				if connectedNetworks[event.Actor.ID] == nil {
+					continue
+				} else {
+					syncer.leaveNetwork(event.Actor.ID, logger)
+				}
+				break
+			}
+			case "create": {
+				if connectedNetworks[event.Actor.ID] != nil {
+					continue
+				} else {
+					syncer.joinNetwork(event.Actor.ID, logger)
+				}
+				break
+			}
+		}
+	}
+}
+
+// joinNetwork adds the proxy container to the specified network.
+func (s ProxySyncer) joinNetwork(changedNetworkID string, logger service.Logger) error {
+	if err := s.Client.NetworkDisconnect(s.Context, changedNetworkID, s.ContainerID, true); err != nil {
+		logger.Errorf("Failed to join the network %v. ERROR: %v", changedNetworkID, err)
+		return err
+	}
+	return nil
+}
+
+// leaveNetwork removes the proxy container from the specified network.
+func (s ProxySyncer) leaveNetwork(changedNetworkID string, logger service.Logger) error {
+	err := s.Client.NetworkConnect(s.Context, changedNetworkID, s.ContainerID, &network.EndpointSettings{})
+	if err != nil {
+		logger.Errorf("Failed to leave the network %v. ERROR: %v", changedNetworkID, err)
+		return err
+	}
+	return nil
+}
+
+// connectedNetworks returns what networks the proxy container is already a part of.
+func (s ProxySyncer) connectedNetworks() (map[string]*(network.EndpointSettings), error) {
+	container, err := s.Client.ContainerInspect(context.Background(), s.ContainerID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return container.NetworkSettings.Networks, nil
+}
+
+// createFilters filters the events from Docker to only relate to network creation and deletion
+// events.
+func createFilters() filters.Args {
+	args := filters.NewArgs()
+
+	args.Add("type", "network")
+	args.Add("event", "create")
+	args.Add("event", "destroy")
+
+	return args
+}
+
+
+
+
+
+
+
