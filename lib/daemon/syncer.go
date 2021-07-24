@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
@@ -17,15 +18,15 @@ import (
 
 const DefaultContainerName = "falcon-proxy"
 
-// ProxySyncer is the responsible for ensuring that the falcon Traefik container stays in sync with
+// ProxySyncer is the class responsible for ensuring that the falcon Traefik container stays in sync with
 // all Docker networks on the machine, joining them when they're created and leaving them when
 // they're destroyed. Note that an empty ProxySyncer will NOT work. You must call the `NewProxy`
-// funciton instead.
+// function instead.
 type ProxySyncer struct {
-	Client *client.Client
-	Context context.Context
-	CancelFunc context.CancelFunc
-	ContainerID string
+	Client       *client.Client
+	Context      context.Context
+	CancelFunc   context.CancelFunc
+	ContainerID  string
 	EventChannel <-chan events.Message
 }
 
@@ -34,97 +35,159 @@ type ProxySyncer struct {
 func NewProxySyncer() (ProxySyncer, error) {
 	// The most up-to-date client version as of writing this code. Ensures object shapes and other
 	// such stuff doesn't change on us depending on the user's version of Docker
-	client, err := client.NewClientWithOpts(client.WithVersion("20.10.7"), client.FromEnv)
+	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
 	if err != nil {
 		return ProxySyncer{}, nil
 	}
 	context, cancelFunc := context.WithCancel(context.Background())
 	eventChannel, _ := client.Events(context, types.EventsOptions{Filters: createFilters()})
 
-
 	return ProxySyncer{
-		Client: client,
-		Context: context,
-		CancelFunc: cancelFunc,
-		ContainerID: DefaultContainerName,
+		Client:       client,
+		Context:      context,
+		CancelFunc:   cancelFunc,
+		ContainerID:  DefaultContainerName,
 		EventChannel: eventChannel,
 	}, nil
 }
 
-// StartSyncing listens to the Docker API for any network changes and either adds or removes the
-// falcon-proxy as necessary, whenever any changes come in.
+// Start starts the daemon listening for network changes, adding and removing the proxy container
+// from networks as necessary.
 func (syncer ProxySyncer) Start(s service.Service) error {
-
 	logger, err := s.Logger(nil)
 
 	if err != nil {
+		logger.Errorf("%v ### Unable to create a logger. ERROR: %v", time.Now(), err)
 		return err
 	}
 
-	go syncer.listenForNetworkEvents(logger)
+	if err := syncer.sync(); err != nil {
+		logger.Errorf("%v ### Unable to perform the initial sync. ERROR: %v", time.Now(), err)
+		return err
+	}
+
+	go func() {
+		for {
+			<- syncer.EventChannel
+			if err := syncer.sync(); err != nil {
+				logger.Errorf("%v ### Unable to perform a sync. ERROR: %v", time.Now(), err)
+			}
+		}
+	}()
 	return nil
 }
 
+// Stop stops the proxy syncer daemon by calling the cancel function for the ProxySyncer's context.
 func (syncer ProxySyncer) Stop(s service.Service) error {
 	syncer.CancelFunc()
 	return nil
 }
 
-// TODO When the daemon is first started, it needs to perform an initial sync, in order to
-// add the proxy container to all currently created Docker networks.
+// sync determines what networks the proxy container needs to join and which networks it needs to
+// leave and joins and leaves those networks as appropriate.
+func (syncer ProxySyncer) sync() error {
+	validNetworks, err := syncer.validNetworks()
+	if err != nil {
+		return err
+	}
+	connectedNetworks, err := syncer.connectedNetworks()
+	if err != nil {
+		return err
+	}
 
-// listenForNetworkEvents reads in Docker events from the passed in channel and either adds the proxy
-// to the network, removes the proxy from the network, or does nothing, depending on what's necessary.
-// Note that this method is blocking and will never return, as it is designed to run for perpetuity.
-func (syncer ProxySyncer) listenForNetworkEvents(logger service.Logger) {
-	for {
-		event := <- syncer.EventChannel
-		connectedNetworks, err := syncer.connectedNetworks()
-
-		if err != nil {
-			logger.Error("Unable to read what networks the proxy is connected to. ERROR:", err)
-			continue
-		} else if connectedNetworks[event.Actor.ID] != nil {
-			continue
-		}
-
-		// It's pretty rare for the proxy to either already be a part of a created network or not
-		// already be in a network that was just destroyed, but we should check for it anyways.
-		switch event.Action {
-			case "destroy": {
-				if connectedNetworks[event.Actor.ID] == nil {
-					continue
-				} else {
-					syncer.leaveNetwork(event.Actor.ID, logger)
-				}
-				break
-			}
-			case "create": {
-				if connectedNetworks[event.Actor.ID] != nil {
-					continue
-				} else {
-					syncer.joinNetwork(event.Actor.ID, logger)
-				}
-				break
-			}
+	for _, network := range syncer.networksToJoin(validNetworks, connectedNetworks) {
+		if err := syncer.joinNetwork(network); err != nil {
+			return err
 		}
 	}
+
+	for _, network := range syncer.networksToLeave(validNetworks, connectedNetworks) {
+		if err := syncer.leaveNetwork(network); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validNetworks returns a map of network IDs to booleans. If a network ID is in the map, it is
+// considered a valid network that the proxy should be a part of. This method, along with
+// networksToJoin and networksToLeave, is graciously taken from
+// https://github.com/codekitchen/dinghy-http-proxy/blob/master/join-networks.go.
+// The code there, at the time of writing, was licensed under the MIT License. The license can be
+// found at https://github.com/codekitchen/dinghy-http-proxy/blob/master/LICENSE
+func (syncer ProxySyncer) validNetworks() (map[string]bool, error) {
+	allNetworks, err := syncer.Client.NetworkList(syncer.Context, types.NetworkListOptions{})
+
+	if err != nil {
+		return nil, nil
+	}
+
+	validNetworks := make(map[string]bool, len(allNetworks))
+
+	for _, network := range allNetworks {
+		if syncer.isValidNetwork(network) {
+			validNetworks[network.ID] = true
+		}
+	}
+
+	return validNetworks, nil
+}
+
+// isValidNetwork determines if the specified network is a valid network that the proxy
+// container should be a part of.
+func (syncer ProxySyncer) isValidNetwork(network types.NetworkResource) bool {
+	if network.Driver == "bridge" {
+		numContainers := len(network.Containers)
+		 _, joined := network.Containers[syncer.ContainerID]
+		return network.Options["com.docker.network.bridge.default_bridge"] == "true" ||
+			numContainers > 1 ||
+			(numContainers == 1 && !joined)
+	}
+	return false
+}
+
+// networksToJoin uses the passed in information about the current network state and determines
+// which networks the proxy container should join.
+func (syncer ProxySyncer) networksToJoin(validNetworks map[string]bool, connectedNetworks map[string]*(network.EndpointSettings)) []string {
+
+	toJoin := make([]string, len(validNetworks))
+
+	for networkID := range connectedNetworks {
+		if _, joined := validNetworks[networkID]; !joined {
+			toJoin = append(toJoin, networkID)
+		}
+	}
+	return toJoin
+}
+
+// networksToLeave uses the passed in information about the current network state and determines
+// which networks the proxy container should join.
+func (syncer ProxySyncer) networksToLeave(validNetworks map[string]bool, connectedNetworks map[string]*(network.EndpointSettings)) []string {
+
+	toLeave := make([]string, len(connectedNetworks))
+
+	for networkID := range validNetworks {
+		if _, joined := connectedNetworks[networkID]; joined {
+			toLeave = append(toLeave, networkID)
+		}
+	}
+
+	return toLeave
 }
 
 // joinNetwork adds the proxy container to the specified network.
-func (s ProxySyncer) joinNetwork(changedNetworkID string, logger service.Logger) error {
+func (s ProxySyncer) joinNetwork(changedNetworkID string) error {
 	if err := s.Client.NetworkDisconnect(s.Context, changedNetworkID, s.ContainerID, true); err != nil {
-		logger.Errorf("Failed to join the network %v. ERROR: %v", changedNetworkID, err)
 		return err
 	}
 	return nil
 }
 
 // leaveNetwork removes the proxy container from the specified network.
-func (s ProxySyncer) leaveNetwork(changedNetworkID string, logger service.Logger) error {
+func (s ProxySyncer) leaveNetwork(changedNetworkID string) error {
 	err := s.Client.NetworkConnect(s.Context, changedNetworkID, s.ContainerID, &network.EndpointSettings{})
 	if err != nil {
-		logger.Errorf("Failed to leave the network %v. ERROR: %v", changedNetworkID, err)
 		return err
 	}
 	return nil
@@ -141,21 +204,14 @@ func (s ProxySyncer) connectedNetworks() (map[string]*(network.EndpointSettings)
 	return container.NetworkSettings.Networks, nil
 }
 
-// createFilters filters the events from Docker to only relate to network creation and deletion
+// createFilters filters the events from Docker to only relate to network connect and disconnect
 // events.
 func createFilters() filters.Args {
 	args := filters.NewArgs()
 
 	args.Add("type", "network")
-	args.Add("event", "create")
-	args.Add("event", "destroy")
+	args.Add("event", "connect")
+	args.Add("event", "disconnect")
 
 	return args
 }
-
-
-
-
-
-
-

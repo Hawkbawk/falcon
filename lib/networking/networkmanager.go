@@ -3,12 +3,9 @@
 package networking
 
 import (
-	"fmt"
-	"io"
 	"os"
 	"regexp"
 
-	"github.com/hawkbawk/falcon/lib/docker"
 	"github.com/hawkbawk/falcon/lib/files"
 	"github.com/hawkbawk/falcon/lib/logger"
 	"github.com/hawkbawk/falcon/lib/shell"
@@ -19,8 +16,9 @@ const managerResolvFilePath = "/var/run/NetworkManager/resolv.conf"
 const dockerConfFilePath = "/etc/NetworkManager/dnsmasq.d/docker.conf"
 const dnsmasqLine = "dns=dnsmasq\n"
 
-
-var dockerConfLine string = fmt.Sprint("address=/docker/", docker.DefaultGateway)
+// This line will need to be updated, as we no longer set a static IP for the proxy, which means
+// we need to dynamically determine the IP address.
+// var dockerConfLine string = fmt.Sprint("address=/docker/", docker.DefaultGateway)
 var mainSectionRegex *regexp.Regexp = regexp.MustCompile(`^[main]$`)
 var dnsmasqEnabledRegex *regexp.Regexp = regexp.MustCompile(`^dns=dnsmasq$`)
 
@@ -108,7 +106,7 @@ func stopManagerManagingResolv() {
 func createDockerConfFile() {
 	dockerConfFile := files.CreateFile(dockerConfFilePath)
 
-	io.WriteString(dockerConfFile, dockerConfLine)
+	// io.WriteString(dockerConfFile, dockerConfLine)
 
 	if err := dockerConfFile.Close(); err != nil {
 		logger.LogError("Unable to create dnsmasq docker.conf file. Error: ", err.Error())

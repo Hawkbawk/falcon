@@ -54,7 +54,7 @@ in order to install the daemon.`,
 			log.Fatalln("Unable to install the daemon. Please run again with sudo to install the daemon.")
 		}
 
-		if err := daemon.Service.Start(); err != nil {
+		if err := daemon.Service.Run(); err != nil {
 			log.Fatalln("Unable to start the daemon. Please see the following error:", err)
 		}
 	},

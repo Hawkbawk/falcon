@@ -4,18 +4,18 @@ import (
 	"github.com/kardianos/service"
 )
 
-const Name = "falcon-proxy"
-const DisplayName = "falcon-proxy"
+const Name = "falcon-daemon"
+const DisplayName = "falcon-daemon"
 const Description = `Keeps the falcon-proxy container in sync with Docker networks on this machine.`
 
 var svcConfig *service.Config = &service.Config{
-	Name: Name,
+	Name:        Name,
 	DisplayName: DisplayName,
 	Description: Description,
 }
 
 type Daemon struct {
-	Syncer ProxySyncer
+	Syncer  ProxySyncer
 	Service service.Service
 }
 
@@ -32,7 +32,7 @@ func NewDaemon() (*Daemon, error) {
 	}
 
 	return &Daemon{
-		Syncer: syncer,
+		Syncer:  syncer,
 		Service: service,
 	}, nil
 }

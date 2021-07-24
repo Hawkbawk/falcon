@@ -40,9 +40,6 @@ var rootCmd = &cobra.Command{
 you and your containers to reach each other using domain names like "your-app.docker".
 It allows for much easier development when using microservices, or even just two services
 that need to communicate.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -76,7 +73,7 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".prox" (without extension).
+		// Search config in home directory with name ".falcon" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".falcon")
