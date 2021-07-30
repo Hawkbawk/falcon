@@ -26,6 +26,7 @@ import (
 
 	"github.com/hawkbawk/falcon/lib/daemon"
 	"github.com/hawkbawk/falcon/lib/networking"
+	"github.com/hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
 )
 
@@ -44,17 +45,20 @@ in order to install the daemon.`,
 
 		// TODO: Finish up the falcon-proxy container so we can pull and start it here.
 
+		if err := proxy.StartProxy(); err != nil {
+			log.Fatalln("Unable to start the proxy container. ERROR: ", err)
+		}
 		daemon, err := daemon.NewDaemon()
 
 		if err != nil {
 			log.Fatalln("Unable to create the daemon. This is likely due to a bug. Please see the following error:", err)
 		}
 
-		if err := daemon.Service.Install(); err != nil {
+		if err := daemon.Service.Run(); err != nil {
 			log.Fatalln("Unable to install the daemon. Please run again with sudo to install the daemon.")
 		}
 
-		if err := daemon.Service.Run(); err != nil {
+		if err := daemon.Service.Start(); err != nil {
 			log.Fatalln("Unable to start the daemon. Please see the following error:", err)
 		}
 	},
