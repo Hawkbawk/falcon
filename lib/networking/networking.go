@@ -1,28 +1,35 @@
 package networking
 
+import (
+	"runtime"
+
+	"github.com/Hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/networking/darwin"
+	"github.com/Hawkbawk/falcon/lib/networking/linux"
+)
+
 // Configure sets up all networking on the machine for proxying.
 func Configure() {
-	managerConfigFile := openManagerConfigFile()
-	defer closeConfigFile(managerConfigFile)
-
-	enableDnsmasq(managerConfigFile)
-	// Move/backup the resolv file, then create the symlink.
-	moveResolvFile()
-	letManagerManageResolv()
-
-	createDockerConfFile()
-	reloadNetworkManager()
+	os := runtime.GOOS
+	switch os {
+	case "linux":
+		linux.Configure()
+	case "darwin":
+		darwin.Configure()
+	default:
+		logger.LogError("Your current OS of %v is unsupported. We only currently support Ubuntu and macOS.", os)
+	}
 }
 
 // Restore returns all networking on the machine back to it's original state (hopefully)
 func Restore() {
-	managerConfigFile := openManagerConfigFile()
-	defer closeConfigFile(managerConfigFile)
-	disableDnsmasq(managerConfigFile)
-	// First remove the symlink, then restore the resolv file.
-	stopManagerManagingResolv()
-	restoreResolvFile()
-	// The docker.conf tells dnsmasq how to resolve requests to *.docker domains.
-	deleteDockerConfFile()
-	reloadNetworkManager()
+	os := runtime.GOOS
+	switch os {
+	case "linux":
+		linux.Restore()
+	case "darwin":
+		darwin.Configure()
+	default:
+		logger.LogError("Your current OS of %v is unsupported. We only currently support Ubuntu and macOS.", os)
+	}
 }

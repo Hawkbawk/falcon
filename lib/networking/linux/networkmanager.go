@@ -1,8 +1,10 @@
 // The networkmanager package contains all of the functions necessary to set up a Linux machine
-// to use manage resolv and run dnsmasq.
-package networking
+// to enable NetworkManager dnsmasq and let NetworkManager control resolv.conf
+package linux
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"regexp"
 
@@ -15,10 +17,17 @@ const managerConfigFilePath = "/etc/NetworkManager/NetworkManager.conf"
 const managerResolvFilePath = "/var/run/NetworkManager/resolv.conf"
 const dockerConfFilePath = "/etc/NetworkManager/dnsmasq.d/docker.conf"
 const dnsmasqLine = "dns=dnsmasq\n"
+// This is the secret sauce that allows falcon to work better than dory. This new
+// loopback address ensures that intercontainer communication works properly, as requests
+// to *.docker will resolve to this address, rather than 127.0.0.1. This ensures that all
+// requests from one container to another actually go through the proxy and don't get stuck
+// inside the container itself.
+const loopbackAddress = "192.168.40.1"
+const netmask = "32"
 
 // This line will need to be updated, as we no longer set a static IP for the proxy, which means
 // we need to dynamically determine the IP address.
-// var dockerConfLine string = fmt.Sprint("address=/docker/", docker.DefaultGateway)
+var dockerConfLine string = fmt.Sprint("address=/docker/", loopbackAddress)
 var mainSectionRegex *regexp.Regexp = regexp.MustCompile(`\[main\]`)
 var dnsmasqEnabledRegex *regexp.Regexp = regexp.MustCompile(`^dns=dnsmasq$`)
 
@@ -106,7 +115,7 @@ func stopManagerManagingResolv() {
 func createDockerConfFile() {
 	dockerConfFile := files.CreateFile(dockerConfFilePath)
 
-	// io.WriteString(dockerConfFile, dockerConfLine)
+	io.WriteString(dockerConfFile, dockerConfLine)
 
 	if err := dockerConfFile.Close(); err != nil {
 		logger.LogError("Unable to create dnsmasq docker.conf file. Error: ", err.Error())
@@ -115,6 +124,20 @@ func createDockerConfFile() {
 
 func deleteDockerConfFile() {
 	files.DeleteFile(dockerConfFilePath)
+}
+
+func addLoopbackAddress() {
+	err := shell.RunCommand("ip", []string{"addr", "add", loopbackAddress + "/" + netmask, "dev", "lo"}, true)
+	if err != nil {
+		logger.LogError("Unable to add the loopback address required by falcon. ERROR: ", err)
+	}
+}
+
+func removeLoopbackAddress() {
+	err := shell.RunCommand("ip", []string{"addr", "del", loopbackAddress + "/" + netmask, "dev", "lo"}, true)
+	if err != nil {
+		logger.LogError("Unable to remove the loopback address added by falcon. ERROR: ", err)
+	}
 }
 
 func reloadNetworkManager() {
