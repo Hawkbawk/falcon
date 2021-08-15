@@ -19,7 +19,7 @@ const dnsmasqLine = "dns=dnsmasq\n"
 // This line will need to be updated, as we no longer set a static IP for the proxy, which means
 // we need to dynamically determine the IP address.
 // var dockerConfLine string = fmt.Sprint("address=/docker/", docker.DefaultGateway)
-var mainSectionRegex *regexp.Regexp = regexp.MustCompile(`^[main]$`)
+var mainSectionRegex *regexp.Regexp = regexp.MustCompile(`\[main\]`)
 var dnsmasqEnabledRegex *regexp.Regexp = regexp.MustCompile(`^dns=dnsmasq$`)
 
 // OpenManagerConfigFile gets a file handler for the NetworkManager config file.
