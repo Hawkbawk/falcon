@@ -3,7 +3,7 @@ package networking
 import (
 	"os"
 
-	"github.com/hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/logger"
 )
 
 const resolvFilePath = "/etc/resolv.conf"

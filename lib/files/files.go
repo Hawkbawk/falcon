@@ -3,7 +3,7 @@ package files
 import (
 	"os"
 
-	"github.com/hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/logger"
 )
 
 // OpenFile opens the file at the specified location. If it encounters any errors, it logs them

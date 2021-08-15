@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/hawkbawk/falcon/lib/files"
-	"github.com/hawkbawk/falcon/lib/logger"
-	"github.com/hawkbawk/falcon/lib/shell"
+	"github.com/Hawkbawk/falcon/lib/files"
+	"github.com/Hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/shell"
 )
 
 const managerConfigFilePath = "/etc/NetworkManager/NetworkManager.conf"

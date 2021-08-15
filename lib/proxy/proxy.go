@@ -10,7 +10,7 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
-const ProxyImageName = "hawkbawk/falcon-proxy"
+const ProxyImageName = "Hawkbawk/falcon-proxy"
 
 var containerConfig container.Config = container.Config{
 	Image: ProxyImageName,

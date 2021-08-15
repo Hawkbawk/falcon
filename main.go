@@ -22,7 +22,7 @@ THE SOFTWARE.
 
 package main
 
-import "github.com/hawkbawk/falcon/cmd"
+import "github.com/Hawkbawk/falcon/cmd"
 
 // Starts up falcon.
 func main() {
