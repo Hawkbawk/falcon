@@ -1,4 +1,4 @@
-package darwin
+package dnsmasq
 
 import (
 	"fmt"
@@ -9,6 +9,11 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+// The loopback address we use that makes us better than dory. It allows inter-container
+// communication to work by causing all request to *.docker to resolve to 192.168.40.1, which
+// containers send back out through the host networking to the falcon-proxy container, rather than
+// just sending all traffic to *.docker domains back to themselves.
+const LoopbackAddress = "192.168.40.1"
 // The name of the dnsmasq image we use.
 const DnsMasqImageName = "4km3/dnsmasq:2.85-r2"
 // The name of the dnsmasq container when it's running.
@@ -20,7 +25,7 @@ var containerConfig container.Config = container.Config{
 		"53/tcp": struct{}{},
 		"53/udp": struct{}{},
 	},
-	Cmd: []string{"-S", fmt.Sprintf("/docker/%v", loopbackAddress)}, // Tells dnsmasq to forward all requests for *.docker domains to our special loopback address.
+	Cmd: []string{"-S", fmt.Sprintf("/docker/%v", LoopbackAddress)}, // Tells dnsmasq to forward all requests for *.docker domains to our special loopback address.
 }
 
 var hostConfig container.HostConfig = container.HostConfig{
@@ -42,13 +47,17 @@ var hostConfig container.HostConfig = container.HostConfig{
 }
 
 // Starts our dnsmasq container.
-func startDnsmasq() error {
+func Start() {
 	logger.LogInfo("Starting the dnsmasq container...")
-	return docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName)
+	if err := docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName); err != nil {
+		logger.LogError("Unable to start the dnsmasq container due to the following error: \n%v", err)
+	}
 }
 
 // Stops our dnsmasq container.
-func stopDnsmasq() error {
+func Stop() {
 	logger.LogInfo("Stopping the dnsmasq container...")
-	return docker.StopContainer(DnsMasqContainerName)
+	if err := docker.RemoveContainer(DnsMasqContainerName); err != nil {
+		logger.LogError("Unable to remove dnsmasq container due to the following error: \n%v", err)
+	}
 }

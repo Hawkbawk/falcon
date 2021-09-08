@@ -22,7 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"github.com/Hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/dnsmasq"
 	"github.com/Hawkbawk/falcon/lib/networking"
 	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
@@ -31,18 +31,15 @@ import (
 // upCmd represents the up command
 var upCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Sets up networking, the proxy container, and the daemon",
+	Short: "Sets up networking and starts the dnsmasq and proxy container",
 	Long: `falcon up sets up your local networking to point all requests to *.docker to resolve
-to localhost:80. The proxy container (running Traefik) then takes these requests and acts as
+to localhost:80, and then starts the dnsmasq and proxy container.
+The proxy container (running Traefik) then takes these requests and acts as
 a reverse-proxy, determining to which container the request should go to.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Configure()
-
-		// TODO: Finish up the falcon-proxy container so we can pull and start it here.
-
-		if err := proxy.StartProxy(); err != nil {
-			logger.LogError("Unable to start the proxy container. ERROR: %v", err)
-		}
+		dnsmasq.Start()
+		proxy.Start()
 	},
 }
 

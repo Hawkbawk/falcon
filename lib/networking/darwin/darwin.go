@@ -5,15 +5,10 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/Hawkbawk/falcon/lib/dnsmasq"
 	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/shell"
 )
-
-// The loopback address we use that makes us better than dory. It allows inter-container
-// communication to work by causing all request to *.docker to resolve to 192.168.40.1, which
-// containers send back out through the host networking to the falcon-proxy container, rather than
-// just sending all traffic to *.docker domains back to themselves.
-const loopbackAddress = "192.168.40.1"
 
 // The path to the resolver file we're going to create to tell macOS to resolve any requests to the
 // *.docker to our loopback address.
@@ -26,7 +21,7 @@ var loopbackAlreadyDeletedRegex *regexp.Regexp = regexp.MustCompile("(SIOCDIFADD
 
 // The command that adds our custom resolver for *.docker domains. By running through the shell, we
 // can ask for sudo only when we need it, rather than requiring a user to run falcon with sudo.
-var addResolverCmd string = fmt.Sprintf(`echo "# Added by falcon\nnameserver %v" | sudo tee %v > /dev/null`, loopbackAddress, dockerResolverPath)
+var addResolverCmd string = fmt.Sprintf(`echo "nameserver %v" | sudo tee %v > /dev/null`, dnsmasq.LoopbackAddress, dockerResolverPath)
 
 // Configure configures the host machine's networking to allow the falcon-proxy to work it's magic.
 func Configure() {
@@ -37,16 +32,12 @@ func Configure() {
 	if err := addLoopbackAddress(); err != nil {
 		logger.LogError("Unable to add loopback address due to the following error: \n%v", err)
 	}
-
-	if err := startDnsmasq(); err != nil {
-		logger.LogError("Unable to start the dnsmasq Docker container due to the following error: \n%v", err)
-	}
 }
 
 // Adds the custom *.docker custom resolver.
 func addDockerResolver() error {
 	logger.LogInfo("Requesting sudo to write to /etc/resolver/docker...")
-	if err := shell.RunCommands(addResolverCmd); err != nil {
+	if err := shell.RunCommand(addResolverCmd); err != nil {
 		return err
 	}
 	return nil
@@ -55,18 +46,14 @@ func addDockerResolver() error {
 // Adds the additional loopback address required for inter-container communication to work.
 func addLoopbackAddress() error {
 	logger.LogInfo("Requesting sudo to add a new loopback address...")
-	if err := shell.RunCommand("ifconfig", []string{"lo0", "alias", loopbackAddress}, true); err != nil {
+	if err := shell.RunCommand(fmt.Sprintf("sudo ifconfig lo0 alias %v", dnsmasq.LoopbackAddress)); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Restore restores the host machine's networking to it's previous state before starting falcon.
-func Restore() {
-	if err := stopDnsmasq(); err != nil {
-		logger.LogError("Unable to stop the dnsmasq container due to the following error: \n%v", err)
-	}
-
+// Clean restores the host machine's networking to it's previous state before starting falcon.
+func Clean() {
 	if err := removeLoopbackAddress(); err != nil {
 		logger.LogError("Unable to remove the loopback address due to the following error: \n%v", err)
 	}
@@ -89,7 +76,7 @@ func removeDockerResolver() error {
 	}
 
 	logger.LogInfo("Requesting sudo to remove /etc/resolver/docker...")
-	if err := shell.RunCommand("rm", []string{dockerResolverPath}, true); err != nil {
+	if err := shell.RunCommand(fmt.Sprintf("sudo rm -f %v", dockerResolverPath)); err != nil {
 		return err
 	}
 	return nil
@@ -98,7 +85,7 @@ func removeDockerResolver() error {
 // Removes the previously added custom loopback address.
 func removeLoopbackAddress() error {
 	logger.LogInfo("Requesting sudo to remove the added loopback address...")
-	err := shell.RunCommand("ifconfig", []string{"lo0", "-alias", loopbackAddress}, true)
+	err := shell.RunCommand(fmt.Sprintf("sudo ifconfig l0 -alias %v", dnsmasq.LoopbackAddress))
 
 	if loopbackAlreadyDeletedRegex.Match([]byte(err.Error())) {
 		return nil

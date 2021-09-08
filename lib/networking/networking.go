@@ -21,14 +21,14 @@ func Configure() {
 	}
 }
 
-// Restore returns all networking on the machine back to it's original state (hopefully)
-func Restore() {
+// Clean returns all networking on the machine back to it's original state (hopefully)
+func Clean() {
 	os := runtime.GOOS
 	switch os {
 	case "linux":
 		linux.Restore()
 	case "darwin":
-		darwin.Configure()
+		darwin.Clean()
 	default:
 		logger.LogError("Your current OS of %v is unsupported. We only currently support Ubuntu and macOS.", os)
 	}

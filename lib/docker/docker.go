@@ -48,7 +48,7 @@ func getContainerID(containerName string) (string, error) {
 	}
 }
 
-func StopContainer(containerName string) error {
+func RemoveContainer(containerName string) error {
 	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
 	if err != nil {
 		return err

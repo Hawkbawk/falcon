@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/Hawkbawk/falcon/lib/dnsmasq"
 	"github.com/Hawkbawk/falcon/lib/files"
 	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/shell"
@@ -128,26 +129,20 @@ func deleteDockerConfFile() {
 }
 
 func addLoopbackAddress() {
-	err := shell.RunCommand("ip", []string{"addr", "add", loopbackAddress + "/" + netmask, "dev", "lo"}, true)
-	if err != nil {
+	if err := shell.RunCommand(fmt.Sprintf("sudo ip addr add %v/%v dev lo", dnsmasq.LoopbackAddress, netmask)); err != nil {
 		logger.LogError("Unable to add the loopback address required by falcon. ERROR: ", err)
 	}
 }
 
 func removeLoopbackAddress() {
-	err := shell.RunCommand("ip", []string{"addr", "del", loopbackAddress + "/" + netmask, "dev", "lo"}, true)
-	if err != nil {
+	if err := shell.RunCommand(fmt.Sprintf("sudo ip addr del %v/%v dev lo", dnsmasq.LoopbackAddress, netmask)); err != nil {
 		logger.LogError("Unable to remove the loopback address added by falcon. ERROR: ", err)
+
 	}
 }
 
 func reloadNetworkManager() {
-	args := []string{
-		"reload",
-		"NetworkManager",
-	}
-
-	if err := shell.RunCommand("systemctl", args, true); err != nil {
+	if err := shell.RunCommand("sudo systemctl reload NetworkManager"); err != nil {
 		logger.LogError("Unable to restart NetworkManager. Error: ", err.Error())
 	}
 }
