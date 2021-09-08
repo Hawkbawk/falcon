@@ -5,17 +5,18 @@ package logger
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
 )
 
-var DebugMode bool = viper.GetBool("PROX_DEBUG_MODE")
+var DebugMode bool = viper.GetBool("FALCON_DEBUG")
 
 // Logs the given statement if debug mode is enabled.
 func LogDebugOnly(statement ...interface{}) {
 	if DebugMode {
-		log.Print("PROX DEBUG STATEMENT:", statement)
+		log.Print("FALCON DEBUG STATEMENT:", statement)
 	}
 }
 
@@ -30,5 +31,5 @@ func LogInfo(format string, substitutions ...interface{}) {
 func LogError(format string, substitutions ...interface{}) {
 	formatted := fmt.Sprintf(format, substitutions...)
 	color.Red(formatted)
-	panic(1)
+	os.Exit(1)
 }

@@ -10,41 +10,25 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// ContainerIsRunning determines whether or not the specified container is running.
-// If a non-nil error is returned, then it was unable to be determined if the specified container
-// exists. Ensure you handle the error appropriately,
-// otherwise you could run into undefined and unexpected behaviour.
-func ContainerIsRunning(containerName string) (bool, error) {
-	id, err := getContainerID(containerName)
-
-	if err != nil {
-		return false, err
-	} else if id == "" {
-		return false, nil
-	} else {
-		return true, nil
-	}
-}
-
 // getContainerID determines the id of the first container that matches the specified container name.
 // If no match is found, then an empty id and nil error is returned. Note that this function only
 // looks at containers that are in a running state.
-func getContainerID(containerName string) (string, error) {
+func getContainer(containerName string) (*types.Container, error) {
 	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	ctx := context.Background()
 
-	containers, err := client.ContainerList(ctx, types.ContainerListOptions{Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: containerName}, filters.KeyValuePair{Key: "status", Value: "running"})})
+	containers, err := client.ContainerList(ctx, types.ContainerListOptions{All: true, Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: containerName})})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	} else if len(containers) == 0 {
-		return "", nil
+		return nil, nil
 	} else {
-		return containers[0].ID, nil
+		return &containers[0], nil
 	}
 }
 
@@ -55,15 +39,17 @@ func RemoveContainer(containerName string) error {
 	}
 	ctx := context.Background()
 
-	id, err := getContainerID(containerName)
+	container, err := getContainer(containerName)
 
 	if err != nil {
 		return err
-	} else if id == "" {
+	} else if container == nil {
 		return nil
 	}
 
-	if err := client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{}); err != nil {
+	// Make sure we stop the container before removing it, cause the SDK docs lie, and it doesn't
+	// actually kill the container for you, unless you specify force.
+	if err := client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
 		return err
 	}
 
@@ -71,14 +57,6 @@ func RemoveContainer(containerName string) error {
 }
 
 func StartContainer(imageName string, hostConfig *container.HostConfig, containerConfig *container.Config, containerName string) error {
-	running, err := ContainerIsRunning(containerName)
-
-	if err != nil {
-		return err
-	} else if running {
-		return nil
-	}
-
 	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
 
 	if err != nil {
@@ -87,12 +65,31 @@ func StartContainer(imageName string, hostConfig *container.HostConfig, containe
 
 	ctx := context.Background()
 
+	container, err := getContainer(containerName)
+
+	if err != nil {
+		return err
+	} else if container != (*types.Container)(nil) {
+		// I've been burned in the past by not checking whether a container already exists
+		// with our specified name and restarting it if it's not already running.
+		if container.Status != "running" {
+			if err := client.ContainerRestart(ctx, container.ID, nil); err != nil {
+				return err
+			} else {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+
 	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{})
 
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
+
 	ref, err := client.ContainerCreate(ctx,
 		containerConfig,
 		hostConfig, &network.NetworkingConfig{},

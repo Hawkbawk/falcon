@@ -17,7 +17,7 @@ const dockerResolverPath = "/etc/resolver/docker"
 // Allows us to check if, when deleting our new loopback address, the operation failed because
 // the address didn't exist in the first place. This way we can make sure falcon down is idempotent
 // and doesn't error when run multiple times in a row.
-var loopbackAlreadyDeletedRegex *regexp.Regexp = regexp.MustCompile("(SIOCDIFADDR)")
+var loopbackAlreadyDeletedRegex regexp.Regexp = *regexp.MustCompile("(SIOCDIFADDR)")
 
 // The command that adds our custom resolver for *.docker domains. By running through the shell, we
 // can ask for sudo only when we need it, rather than requiring a user to run falcon with sudo.
@@ -85,11 +85,15 @@ func removeDockerResolver() error {
 // Removes the previously added custom loopback address.
 func removeLoopbackAddress() error {
 	logger.LogInfo("Requesting sudo to remove the added loopback address...")
-	err := shell.RunCommand(fmt.Sprintf("sudo ifconfig l0 -alias %v", dnsmasq.LoopbackAddress))
+	err := shell.RunCommand(fmt.Sprintf("sudo ifconfig lo0 -alias %v", dnsmasq.LoopbackAddress))
 
-	if loopbackAlreadyDeletedRegex.Match([]byte(err.Error())) {
-		return nil
-	} else {
-		return err
+	if err != nil {
+		if loopbackAlreadyDeletedRegex.Match([]byte(err.Error())) {
+			return nil
+		} else {
+			return err
+		}
 	}
+
+	return nil
 }
