@@ -19,13 +19,13 @@ func LogDebugOnly(statement ...interface{}) {
 	}
 }
 
-// Logs the given statement(s) in white text to stdout, after formatting it using fmt.Sprint
+// Logs the given statement(s) in white text to stdout, after formatting it using fmt.Sprintf
 func LogInfo(format string, substitutions ...interface{}) {
 	formatted := fmt.Sprintf(format, substitutions...)
 	color.White(formatted)
 }
 
-// Logs the given statement in red text to stdout (after formatting it using fmt.Sprint)
+// Logs the given statement in red text to stdout, after formatting it using fmt.Sprintf
 // and then ends the program with an exit code of 1.
 func LogError(format string, substitutions ...interface{}) {
 	formatted := fmt.Sprintf(format, substitutions...)

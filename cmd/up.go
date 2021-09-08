@@ -22,8 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"log"
-
+	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/networking"
 	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
@@ -35,17 +34,14 @@ var upCmd = &cobra.Command{
 	Short: "Sets up networking, the proxy container, and the daemon",
 	Long: `falcon up sets up your local networking to point all requests to *.docker to resolve
 to localhost:80. The proxy container (running Traefik) then takes these requests and acts as
-a reverse-proxy, determining to which container the request should go to. The falcon daemon runs
-in the background and automatically adds the proxy container to any Docker networks that get created.
-Note that this command must be run with sudo the first time, or after any calls to 'falcon purge',
-in order to install the daemon.`,
+a reverse-proxy, determining to which container the request should go to.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Configure()
 
 		// TODO: Finish up the falcon-proxy container so we can pull and start it here.
 
 		if err := proxy.StartProxy(); err != nil {
-			log.Fatalln("Unable to start the proxy container. ERROR: ", err)
+			logger.LogError("Unable to start the proxy container. ERROR: %v", err)
 		}
 	},
 }

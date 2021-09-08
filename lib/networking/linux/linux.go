@@ -3,7 +3,6 @@ package linux
 func Configure() {
 	managerConfigFile := openManagerConfigFile()
 
-
 	addLoopbackAddress()
 	enableDnsmasq(managerConfigFile)
 	// We can't defer this, as we have to save the change we make before we reload NetworkManager.
@@ -19,7 +18,6 @@ func Configure() {
 
 func Restore() {
 	managerConfigFile := openManagerConfigFile()
-
 
 	removeLoopbackAddress()
 	disableDnsmasq(managerConfigFile)

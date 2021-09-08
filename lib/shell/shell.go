@@ -44,3 +44,16 @@ func RunCommand(desiredCommand string, args []string, runAsSudo bool) error {
 
 	return nil
 }
+
+// RunCommands runs the specified list of commands through the bash shell. This means you can simply
+// write your commands like "echo "hello world" | sudo tee /bin/useless > /dev/null". If any errors
+// are encountered while running the script, this function returns them. Note that because this will
+// run whatever commands you provide to it, you should not run user-provided input through it
+// without at least sanitizing it.
+func RunCommands(commands string) error {
+	cmd := exec.Command("bash", "-c", commands)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("Command(s) failed to run due to the following error: %v", err)
+	}
+	return nil
+}

@@ -17,6 +17,7 @@ const managerConfigFilePath = "/etc/NetworkManager/NetworkManager.conf"
 const managerResolvFilePath = "/var/run/NetworkManager/resolv.conf"
 const dockerConfFilePath = "/etc/NetworkManager/dnsmasq.d/docker.conf"
 const dnsmasqLine = "dns=dnsmasq\n"
+
 // This is the secret sauce that allows falcon to work better than dory. This new
 // loopback address ensures that intercontainer communication works properly, as requests
 // to *.docker will resolve to this address, rather than 127.0.0.1. This ensures that all
@@ -54,7 +55,7 @@ func enableDnsmasq(configFile *os.File) {
 	}
 
 	previousContents := files.ReadFile(configFile)
-	newConfigFile := make([]byte, files.FileSize(configFile) + int64(len(dnsmasqLine)))
+	newConfigFile := make([]byte, files.FileSize(configFile)+int64(len(dnsmasqLine)))
 
 	indices := mainSectionRegex.FindIndex(previousContents)
 
@@ -83,7 +84,7 @@ func disableDnsmasq(configFile *os.File) {
 	}
 
 	previousContents := files.ReadFile(configFile)
-	restoredConfigFile := make([]byte, files.FileSize(configFile) - int64(len(dnsmasqLine)))
+	restoredConfigFile := make([]byte, files.FileSize(configFile)-int64(len(dnsmasqLine)))
 	// Indices cannot be nil, as we have already checked to see if dnsmasq was disabled and
 	// both methods use the same regex.
 	indices := dnsmasqEnabledRegex.FindIndex(previousContents)
