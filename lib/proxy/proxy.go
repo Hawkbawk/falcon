@@ -1,21 +1,19 @@
 package proxy
 
 import (
-	"context"
-
-	"github.com/docker/docker/api/types"
+	"github.com/Hawkbawk/falcon/lib/docker"
+	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 )
 
-const ProxyImageName = "Hawkbawk/falcon-proxy"
+const ProxyImageName = "hawkbawk/falcon-proxy"
+const ProxyContainerName = "falcon-proxy"
 
 var containerConfig container.Config = container.Config{
 	Image: ProxyImageName,
 	ExposedPorts: nat.PortSet{
-		"80": struct{}{},
+		"80":   struct{}{},
 		"8080": struct{}{},
 	},
 }
@@ -27,43 +25,30 @@ var hostConfig container.HostConfig = container.HostConfig{
 	PortBindings: nat.PortMap{
 		"80": []nat.PortBinding{
 			{
-				HostIP: "0.0.0.0",
+				HostIP:   "0.0.0.0",
 				HostPort: "80",
 			},
 		},
 		"8080": []nat.PortBinding{
 			{
-				HostIP: "0.0.0.0",
+				HostIP:   "0.0.0.0",
 				HostPort: "8080",
 			},
 		},
 	},
 }
 
-func StartProxy() error {
-	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
-	if err != nil {
-		return err
+// Start starts up the falcon-proxy so that it can start forwarding requests.
+func Start() {
+	logger.LogInfo("Starting the falcon proxy container...")
+	if err := docker.StartContainer(ProxyImageName, &hostConfig, &containerConfig, ProxyContainerName); err != nil {
+		logger.LogError("Unable to start proxy container due to the following error: \n%v", err)
 	}
-	context := context.Background()
+}
 
-	reader, err := client.ImagePull(context, ProxyImageName, types.ImagePullOptions{})
-
-	if err != nil {
-		return err
+func Stop() {
+	logger.LogInfo("Stopping the falcon proxy container...")
+	if err := docker.RemoveContainer(ProxyContainerName); err != nil {
+		logger.LogError("Unable to remove the proxy container due to the following error: \n%v", err)
 	}
-	defer reader.Close()
-	ref, err := client.ContainerCreate(context,
-		&containerConfig,
-		&hostConfig, &network.NetworkingConfig{},
-		nil, "falcon-proxy")
-
-	if err != nil {
-		return err
-	}
-
-	if err := client.ContainerStart(context, ref.ID, types.ContainerStartOptions{}); err != nil {
-		return nil
-	}
-	return nil
 }
