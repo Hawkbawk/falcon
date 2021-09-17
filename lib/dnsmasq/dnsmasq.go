@@ -25,7 +25,10 @@ var containerConfig container.Config = container.Config{
 		"53/tcp": struct{}{},
 		"53/udp": struct{}{},
 	},
-	Cmd: []string{"-S", fmt.Sprintf("/docker/%v", LoopbackAddress)}, // Tells dnsmasq to forward all requests for *.docker domains to our special loopback address.
+	Cmd: []string{
+		"--log-facility=-", "--listen-address=0.0.0.0",
+		"--interface=eth0", "--interface=docker0",
+		"-A", fmt.Sprintf("/docker/%v", LoopbackAddress)}, // Tells dnsmasq to forward all requests for *.docker domains to our special loopback address.
 }
 
 var hostConfig container.HostConfig = container.HostConfig{
