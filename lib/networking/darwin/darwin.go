@@ -21,7 +21,8 @@ var loopbackAlreadyDeletedRegex regexp.Regexp = *regexp.MustCompile("(SIOCDIFADD
 
 // The command that adds our custom resolver for *.docker domains. By running through the shell, we
 // can ask for sudo only when we need it, rather than requiring a user to run falcon with sudo.
-var addResolverCmd string = fmt.Sprintf(`echo "nameserver %v" | sudo tee %v > /dev/null`, dnsmasq.LoopbackAddress, dockerResolverPath)
+var addResolverCmd string = fmt.Sprintf(`echo "nameserver %v
+port 53" | sudo tee %v > /dev/null`, dnsmasq.LoopbackAddress, dockerResolverPath)
 
 // Configure configures the host machine's networking to allow the falcon-proxy to work it's magic.
 func Configure() {

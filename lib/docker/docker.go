@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -83,12 +84,16 @@ func StartContainer(imageName string, hostConfig *container.HostConfig, containe
 		}
 	}
 
-	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{Platform: "linux/arm64"})
 
 	if err != nil {
 		return err
 	}
+
+	// We have to write the stream of data from pulling the image, otherwise we
+	// won't actually pull the image.
 	defer reader.Close()
+	io.Copy(io.Discard, reader)
 
 	ref, err := client.ContainerCreate(ctx,
 		containerConfig,

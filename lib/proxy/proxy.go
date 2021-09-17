@@ -47,7 +47,7 @@ func Start() {
 }
 
 func Stop() {
-	logger.LogInfo("Removing the falcon proxy container...")
+	logger.LogInfo("Stopping the falcon proxy container...")
 	if err := docker.RemoveContainer(ProxyContainerName); err != nil {
 		logger.LogError("Unable to remove the proxy container due to the following error: \n%v", err)
 	}
