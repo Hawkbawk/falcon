@@ -14,7 +14,11 @@ var containerConfig container.Config = container.Config{
 	Image: ProxyImageName,
 	ExposedPorts: nat.PortSet{
 		"80":   struct{}{},
-		"8080": struct{}{},
+	},
+	Labels: map[string]string{
+		"traefik.enable": "true",
+		"traefik.http.routers.traefik.rule": "Host(`traefik.docker`)",
+		"traefik.http.services.traefik.loadbalancer.server.port": "8080",
 	},
 }
 
@@ -27,12 +31,6 @@ var hostConfig container.HostConfig = container.HostConfig{
 			{
 				HostIP:   "0.0.0.0",
 				HostPort: "80",
-			},
-		},
-		"8080": []nat.PortBinding{
-			{
-				HostIP:   "0.0.0.0",
-				HostPort: "8080",
 			},
 		},
 	},
