@@ -3,23 +3,37 @@ package docker
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+// This DockerClient interface allows us to explicitly define what methods
+// of the docker client we use. This allows for
+//   * a nice visible contract of how we're interacting with the API
+//   * much easier mocking for actually good testing!
+type DockerClient interface {
+	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
+	ContainerRestart(ctx context.Context, containerID string, timeout *time.Duration) error
+	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
+	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
+	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.ContainerCreateCreatedBody, error)
+}
+
+func GetClient() (*client.Client, error) {
+	return client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
+}
 
 // getContainerID determines the id of the first container that matches the specified container name.
 // If no match is found, then an empty id and nil error is returned. Note that this function only
 // looks at containers that are in a running state.
-func getContainer(containerName string) (*types.Container, error) {
-	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
-	if err != nil {
-		return nil, err
-	}
-
+func getContainerId(containerName string, client DockerClient) (*types.Container, error) {
 	ctx := context.Background()
 
 	containers, err := client.ContainerList(ctx, types.ContainerListOptions{All: true, Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: containerName})})
@@ -33,14 +47,10 @@ func getContainer(containerName string) (*types.Container, error) {
 	}
 }
 
-func RemoveContainer(containerName string) error {
-	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
-	if err != nil {
-		return err
-	}
+func RemoveContainer(containerName string, client DockerClient) error {
 	ctx := context.Background()
 
-	container, err := getContainer(containerName)
+	container, err := getContainerId(containerName, client)
 
 	if err != nil {
 		return err
@@ -57,16 +67,10 @@ func RemoveContainer(containerName string) error {
 	return nil
 }
 
-func StartContainer(imageName string, hostConfig *container.HostConfig, containerConfig *container.Config, containerName string) error {
-	client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
-
-	if err != nil {
-		return err
-	}
-
+func StartContainer(imageName string, hostConfig *container.HostConfig, containerConfig *container.Config, containerName string, client DockerClient) error {
 	ctx := context.Background()
 
-	container, err := getContainer(containerName)
+	container, err := getContainerId(containerName, client)
 
 	if err != nil {
 		return err
@@ -84,7 +88,7 @@ func StartContainer(imageName string, hostConfig *container.HostConfig, containe
 		}
 	}
 
-	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{Platform: "linux/arm64"})
+	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{})
 
 	if err != nil {
 		return err

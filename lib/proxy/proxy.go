@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"github.com/Hawkbawk/falcon/lib/docker"
-	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 )
@@ -37,16 +36,10 @@ var hostConfig container.HostConfig = container.HostConfig{
 }
 
 // Start starts up the falcon-proxy so that it can start forwarding requests.
-func Start() {
-	logger.LogInfo("Starting the falcon proxy container...")
-	if err := docker.StartContainer(ProxyImageName, &hostConfig, &containerConfig, ProxyContainerName); err != nil {
-		logger.LogError("Unable to start proxy container due to the following error: \n%v", err)
-	}
+func Start(client docker.DockerClient) error {
+	return docker.StartContainer(ProxyImageName, &hostConfig, &containerConfig, ProxyContainerName, client)
 }
 
-func Stop() {
-	logger.LogInfo("Stopping the falcon proxy container...")
-	if err := docker.RemoveContainer(ProxyContainerName); err != nil {
-		logger.LogError("Unable to remove the proxy container due to the following error: \n%v", err)
-	}
+func Stop(client docker.DockerClient) error {
+	return docker.RemoveContainer(ProxyContainerName, client)
 }

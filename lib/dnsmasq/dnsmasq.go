@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Hawkbawk/falcon/lib/docker"
-	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 )
@@ -50,17 +49,11 @@ var hostConfig container.HostConfig = container.HostConfig{
 }
 
 // Starts our dnsmasq container.
-func Start() {
-	logger.LogInfo("Starting the dnsmasq container...")
-	if err := docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName); err != nil {
-		logger.LogError("Unable to start the dnsmasq container due to the following error: \n%v", err)
-	}
+func Start(client docker.DockerClient) error {
+	return docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName, client)
 }
 
 // Stops our dnsmasq container.
-func Stop() {
-	logger.LogInfo("Stopping the dnsmasq container...")
-	if err := docker.RemoveContainer(DnsMasqContainerName); err != nil {
-		logger.LogError("Unable to remove dnsmasq container due to the following error: \n%v", err)
-	}
+func Stop(client docker.DockerClient) error {
+	return docker.RemoveContainer(DnsMasqContainerName, client)
 }

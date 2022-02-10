@@ -16,7 +16,11 @@ limitations under the License.
 package cmd
 
 import (
+	"os"
+
 	"github.com/Hawkbawk/falcon/lib/dnsmasq"
+	"github.com/Hawkbawk/falcon/lib/docker"
+	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/networking"
 	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
@@ -30,8 +34,22 @@ var downCmd = &cobra.Command{
 	stop and remove the proxy and dnsmasq container.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Clean()
-		dnsmasq.Stop()
-		proxy.Stop()
+		client, err := docker.GetClient()
+		if err != nil {
+			logger.LogError("Unable to connect to Docker server due to the following error:\n%v", err)
+			os.Exit(1)
+		}
+
+		logger.LogInfo("Stopping the dnsmasq container...")
+		if err := dnsmasq.Stop(client); err != nil {
+			logger.LogError("Unable to stop the dnsmasq container:\n%v", err)
+			os.Exit(1)
+		}
+		logger.LogInfo("Stopping the falcon proxy container...")
+		if err := proxy.Stop(client); err != nil {
+			logger.LogError("Unable to stop the proxy container:\n%v", err)
+			os.Exit(1)
+		}
 	},
 }
 

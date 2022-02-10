@@ -22,7 +22,11 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"os"
+
 	"github.com/Hawkbawk/falcon/lib/dnsmasq"
+	"github.com/Hawkbawk/falcon/lib/docker"
+	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/networking"
 	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
@@ -38,8 +42,23 @@ The proxy container (running Traefik) then takes these requests and acts as
 a reverse-proxy, determining to which container the request should go to.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Configure()
-		dnsmasq.Start()
-		proxy.Start()
+		client, err := docker.GetClient()
+		if err != nil {
+			logger.LogError("Unable to connect to the Docker server:\n%v", err)
+			os.Exit(1)
+		}
+
+		logger.LogInfo("Starting the dnsmasq container...")
+		if err := dnsmasq.Start(client); err != nil {
+			logger.LogError("Unable to start the dnsmasq container: \n%v", err)
+			os.Exit(1)
+		}
+
+		logger.LogInfo("Starting the proxy container...")
+		if err := proxy.Start(client); err != nil {
+			logger.LogError("Unable to start the dnsmasq container:\n%v", err)
+			os.Exit(1)
+		}
 	},
 }
 
