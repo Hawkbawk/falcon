@@ -84,7 +84,7 @@ func StartContainer(imageName string, hostConfig *container.HostConfig, containe
 		}
 	}
 
-	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{Platform: "linux/arm64"})
+	reader, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{})
 
 	if err != nil {
 		return err
