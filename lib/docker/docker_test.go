@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Hawkbawk/falcon/mocks/mock_docker"
+	"github.com/Hawkbawk/falcon/mocks/mock_io"
 )
 
 func MockContainerListWithValues(containers []types.Container, err error, mockClient *mock_docker.MockDockerApi, containerName string) {
@@ -46,7 +47,7 @@ var _ = Describe("Docker", func() {
 		}
 	})
 
-	Describe("GetContainerID", func() {
+	Describe("GetContainer", func() {
 		Describe("the container exists", func() {
 			var (
 				containerList []types.Container
@@ -91,7 +92,7 @@ var _ = Describe("Docker", func() {
 		})
 	})
 
-	Describe("RemoveContainer", func() {
+	Describe("StopAndRemoveContainer", func() {
 		Describe("the container exists", func() {
 			var (
 				containerList []types.Container
@@ -109,7 +110,7 @@ var _ = Describe("Docker", func() {
 				MockContainerListWithValues(containerList, nil, mockApi, containerName)
 				MockContainerRemoveWithError(containerId, nil, mockApi)
 
-				Expect(client.RemoveContainer(containerName)).Should(Succeed())
+				Expect(client.StopAndRemoveContainer(containerName)).Should(Succeed())
 			})
 
 			Describe("the container removal throws an error", func() {
@@ -117,7 +118,7 @@ var _ = Describe("Docker", func() {
 					MockContainerListWithValues(containerList, nil, mockApi, containerName)
 					MockContainerRemoveWithError(containerId, fmt.Errorf("err"), mockApi)
 
-					Expect(client.RemoveContainer(containerName)).Should(MatchError("err"))
+					Expect(client.StopAndRemoveContainer(containerName)).Should(MatchError("err"))
 				})
 			})
 		})
@@ -126,7 +127,7 @@ var _ = Describe("Docker", func() {
 			It("doesn't try and remove the container and doesn't error", func() {
 				MockContainerListWithValues(make([]types.Container, 0), nil, mockApi, containerName)
 				ExpectContainerRemoveNotBeCalled(containerId, mockApi)
-				Expect(client.RemoveContainer(containerName)).Should(Succeed())
+				Expect(client.StopAndRemoveContainer(containerName)).Should(Succeed())
 			})
 		})
 
@@ -134,7 +135,57 @@ var _ = Describe("Docker", func() {
 			It("doesn't try and remove the container and returns an error", func() {
 				MockContainerListWithValues(make([]types.Container, 0), fmt.Errorf("err"), mockApi, containerName)
 				ExpectContainerRemoveNotBeCalled(containerId, mockApi)
-				Expect(client.RemoveContainer(containerName)).Should(MatchError("err"))
+				Expect(client.StopAndRemoveContainer(containerName)).Should(MatchError("err"))
+			})
+		})
+	})
+	Describe("StartContainer", func() {
+		var containerList []types.Container
+
+		BeforeEach(func() {
+			mockApi.EXPECT().ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: containerName})}).Return(containerList, nil)
+		})
+
+		Describe("the container exists", func() {
+			BeforeEach(func() {
+				var c = types.Container{
+					ID: containerId,
+				}
+				containerList = make([]types.Container, 0, 1)
+				containerList = append(containerList, c)
+			})
+
+
+			Describe("the container isn't running", func() {
+				BeforeEach(func () {
+					containerList[0].Status = "stopped"
+				})
+
+
+			})
+
+			Describe("the container is running", func() {
+				BeforeEach(func() {
+					containerList[0].Status = "running"
+				})
+			})
+		})
+
+		Describe("the container doesn't exist", func() {
+			var (
+				imageName string = "imageName"
+				readCloserMock mock_io.MockReadCloser
+			)
+
+			BeforeEach(func() {
+				containerList = make([]types.Container, 0)
+				readCloserMock = *mock_io.NewMockReadCloser(ctrl)
+			})
+
+			It("tries to pull the image and create then start the container", func() {
+				readCloserMock.EXPECT().Read([]byte{}).AnyTimes()
+				mockApi.EXPECT().ImagePull(context.Background(), imageName, types.ImagePullOptions{}).Return(readCloserMock, nil)
+
 			})
 		})
 	})

@@ -55,5 +55,5 @@ func Start(client docker.DockerClient) error {
 
 // Stops our dnsmasq container.
 func Stop(client docker.DockerClient) error {
-	return client.RemoveContainer(DnsMasqContainerName)
+	return client.StopAndRemoveContainer(DnsMasqContainerName)
 }

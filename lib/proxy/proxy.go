@@ -41,5 +41,5 @@ func Start(client docker.DockerClient) error {
 }
 
 func Stop(client docker.DockerClient) error {
-	return client.RemoveContainer(ProxyContainerName)
+	return client.StopAndRemoveContainer(ProxyContainerName)
 }

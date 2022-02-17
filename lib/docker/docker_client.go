@@ -25,8 +25,11 @@ type DockerApi interface {
 }
 
 type DockerClient interface {
+	// GetContainer finds the first container that matches the specified container name.
+	// If no match is found, then a nil container and nil error is returned. Note that this function only
+	// looks at containers that are in a running state.
 	GetContainer(containerName string) (*types.Container, error)
-	RemoveContainer(containerName string) error
+	StopAndRemoveContainer(containerName string) error
 	StartContainer(imageName string, hostConfig *container.HostConfig, containerConfig *container.Config, containerName string) error
 }
 
@@ -47,9 +50,7 @@ func NewDockerClient() (DockerClient, error) {
 	}, nil
 }
 
-// GetContainerID determines the id of the first container that matches the specified container name.
-// If no match is found, then an empty id and nil error is returned. Note that this function only
-// looks at containers that are in a running state.
+
 func (dc dockerConsumer) GetContainer(containerName string) (*types.Container, error) {
 	ctx := context.Background()
 
@@ -64,7 +65,7 @@ func (dc dockerConsumer) GetContainer(containerName string) (*types.Container, e
 	}
 }
 
-func (dc dockerConsumer) RemoveContainer(containerName string) error {
+func (dc dockerConsumer) StopAndRemoveContainer(containerName string) error {
 	ctx := context.Background()
 
 	container, err := dc.GetContainer(containerName)
