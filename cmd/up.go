@@ -42,7 +42,7 @@ The proxy container (running Traefik) then takes these requests and acts as
 a reverse-proxy, determining to which container the request should go to.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Configure()
-		client, err := docker.GetClient()
+		client, err := docker.NewDockerClient()
 		if err != nil {
 			logger.LogError("Unable to connect to the Docker server:\n%v", err)
 			os.Exit(1)

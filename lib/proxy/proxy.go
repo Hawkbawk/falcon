@@ -37,9 +37,9 @@ var hostConfig container.HostConfig = container.HostConfig{
 
 // Start starts up the falcon-proxy so that it can start forwarding requests.
 func Start(client docker.DockerClient) error {
-	return docker.StartContainer(ProxyImageName, &hostConfig, &containerConfig, ProxyContainerName, client)
+	return client.StartContainer(ProxyImageName, &hostConfig, &containerConfig, ProxyContainerName)
 }
 
 func Stop(client docker.DockerClient) error {
-	return docker.RemoveContainer(ProxyContainerName, client)
+	return client.RemoveContainer(ProxyContainerName)
 }

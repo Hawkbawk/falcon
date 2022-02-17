@@ -50,10 +50,10 @@ var hostConfig container.HostConfig = container.HostConfig{
 
 // Starts our dnsmasq container.
 func Start(client docker.DockerClient) error {
-	return docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName, client)
+	return client.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName)
 }
 
 // Stops our dnsmasq container.
 func Stop(client docker.DockerClient) error {
-	return docker.RemoveContainer(DnsMasqContainerName, client)
+	return client.RemoveContainer(DnsMasqContainerName)
 }

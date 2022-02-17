@@ -34,7 +34,7 @@ var downCmd = &cobra.Command{
 	stop and remove the proxy and dnsmasq container.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		networking.Clean()
-		client, err := docker.GetClient()
+		client, err := docker.NewDockerClient()
 		if err != nil {
 			logger.LogError("Unable to connect to Docker server due to the following error:\n%v", err)
 			os.Exit(1)
