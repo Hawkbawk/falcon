@@ -12,11 +12,11 @@ const ProxyContainerName = "falcon-proxy"
 var containerConfig container.Config = container.Config{
 	Image: ProxyImageName,
 	ExposedPorts: nat.PortSet{
-		"80":   struct{}{},
+		"80": struct{}{},
 	},
 	Labels: map[string]string{
-		"traefik.enable": "true",
-		"traefik.http.routers.traefik.rule": "Host(`traefik.docker`)",
+		"traefik.enable":                                         "true",
+		"traefik.http.routers.traefik.rule":                      "Host(`traefik.docker`)",
 		"traefik.http.services.traefik.loadbalancer.server.port": "8080",
 	},
 }

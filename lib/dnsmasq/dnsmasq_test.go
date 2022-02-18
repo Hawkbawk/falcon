@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Dnsmasq", func() {
 	var (
-		ctrl *gomock.Controller
+		ctrl       *gomock.Controller
 		mockClient *mock_docker.MockDockerClient
 	)
 

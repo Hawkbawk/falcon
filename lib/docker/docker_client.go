@@ -13,8 +13,6 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-
-
 type DockerApi interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
@@ -29,14 +27,16 @@ type DockerClient interface {
 	// If no match is found, then a nil container and nil error is returned. Note that this function only
 	// looks at containers that are in a running state.
 	GetContainer(containerName string) (*types.Container, error)
+	// Stops and removes the first container that matches the provided container name.
+	// If no containers match, nothing happens. If any errors are encountered, they're returned.
 	StopAndRemoveContainer(containerName string) error
+	// Starts a container with the specified configuration. If any errors are encountered, they are returned.
 	StartContainer(imageName string, hostConfig *container.HostConfig, containerConfig *container.Config, containerName string) error
 }
 
 type dockerConsumer struct {
 	api DockerApi
 }
-
 
 func NewDockerClient() (DockerClient, error) {
 	api, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
@@ -49,7 +49,6 @@ func NewDockerClient() (DockerClient, error) {
 		api: api,
 	}, nil
 }
-
 
 func (dc dockerConsumer) GetContainer(containerName string) (*types.Container, error) {
 	ctx := context.Background()
