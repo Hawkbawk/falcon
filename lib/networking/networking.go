@@ -1,35 +1,36 @@
 package networking
 
 import (
+	"fmt"
 	"runtime"
 
-	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/networking/darwin"
-	"github.com/Hawkbawk/falcon/lib/networking/linux"
 )
 
 // Configure sets up all networking on the machine for proxying.
-func Configure() {
+func Configure() error {
 	os := runtime.GOOS
 	switch os {
-	case "linux":
-		linux.Configure()
+	// Linux support is disabled currently, but will be fixed later
+	// case "linux":
+	// 	return linux.Configure()
 	case "darwin":
-		darwin.Configure()
+		return darwin.Configure()
 	default:
-		logger.LogError("Your current OS of %v is unsupported. We only currently support Ubuntu and macOS.", os)
+		return fmt.Errorf("we only support macOS currently")
 	}
 }
 
 // Clean returns all networking on the machine back to it's original state (hopefully)
-func Clean() {
+func Clean() error {
 	os := runtime.GOOS
 	switch os {
-	case "linux":
-		linux.Restore()
+	// Linux support is disabled currently, but will be fixed later
+	// case "linux":
+	// 	return linux.Restore()
 	case "darwin":
-		darwin.Clean()
+		return darwin.Clean()
 	default:
-		logger.LogError("Your current OS of %v is unsupported. We only currently support Ubuntu and macOS.", os)
+		return fmt.Errorf("we only support macOS currently")
 	}
 }

@@ -22,6 +22,9 @@ func LogDebugOnly(statement ...interface{}) {
 
 // Logs the given statement(s) in white text to stdout, after formatting it using fmt.Sprintf
 func LogInfo(format string, substitutions ...interface{}) {
+	if os.Getenv("FALCON_TESTING") == "true" {
+		return
+	}
 	formatted := fmt.Sprintf(format, substitutions...)
 	color.White(formatted)
 }
