@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Hawkbawk/falcon/lib/docker"
-	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 )
@@ -14,12 +13,14 @@ import (
 // containers send back out through the host networking to the falcon-proxy container, rather than
 // just sending all traffic to *.docker domains back to themselves.
 const LoopbackAddress = "192.168.40.1"
+
 // The name of the dnsmasq image we use.
 const DnsMasqImageName = "4km3/dnsmasq:2.85-r2"
+
 // The name of the dnsmasq container when it's running.
 const DnsMasqContainerName = "falcon-dnsmasq"
 
-var containerConfig container.Config = container.Config{
+var containerConfig *container.Config = &container.Config{
 	Image: DnsMasqImageName,
 	ExposedPorts: nat.PortSet{
 		"53/tcp": struct{}{},
@@ -31,7 +32,7 @@ var containerConfig container.Config = container.Config{
 		"-A", fmt.Sprintf("/docker/%v", LoopbackAddress)}, // Tells dnsmasq to forward all requests for *.docker domains to our special loopback address.
 }
 
-var hostConfig container.HostConfig = container.HostConfig{
+var hostConfig *container.HostConfig = &container.HostConfig{
 	PortBindings: nat.PortMap{
 		"53/tcp": []nat.PortBinding{
 			{
@@ -50,17 +51,11 @@ var hostConfig container.HostConfig = container.HostConfig{
 }
 
 // Starts our dnsmasq container.
-func Start() {
-	logger.LogInfo("Starting the dnsmasq container...")
-	if err := docker.StartContainer(DnsMasqImageName, &hostConfig, &containerConfig, DnsMasqContainerName); err != nil {
-		logger.LogError("Unable to start the dnsmasq container due to the following error: \n%v", err)
-	}
+func Start(client docker.DockerClient) error {
+	return client.StartContainer(DnsMasqImageName, hostConfig, containerConfig, DnsMasqContainerName)
 }
 
 // Stops our dnsmasq container.
-func Stop() {
-	logger.LogInfo("Stopping the dnsmasq container...")
-	if err := docker.RemoveContainer(DnsMasqContainerName); err != nil {
-		logger.LogError("Unable to remove dnsmasq container due to the following error: \n%v", err)
-	}
+func Stop(client docker.DockerClient) error {
+	return client.StopAndRemoveContainer(DnsMasqContainerName)
 }

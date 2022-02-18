@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"github.com/Hawkbawk/falcon/lib/dnsmasq"
+	"github.com/Hawkbawk/falcon/lib/docker"
+	"github.com/Hawkbawk/falcon/lib/logger"
 	"github.com/Hawkbawk/falcon/lib/networking"
 	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
@@ -29,9 +31,22 @@ var downCmd = &cobra.Command{
 	Long: `Running the down command will restore all machine networking to normal. It will also
 	stop and remove the proxy and dnsmasq container.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		networking.Clean()
-		dnsmasq.Stop()
-		proxy.Stop()
+		if err := networking.Clean(); err != nil {
+			logger.LogError("Unable to restore networking:\n%v", err)
+		}
+		client, err := docker.NewDockerClient()
+		if err != nil {
+			logger.LogError("Unable to connect to Docker server due to the following error:\n%v", err)
+		}
+
+		logger.LogInfo("Stopping the dnsmasq container...")
+		if err := dnsmasq.Stop(client); err != nil {
+			logger.LogError("Unable to stop the dnsmasq container:\n%v", err)
+		}
+		logger.LogInfo("Stopping the falcon proxy container...")
+		if err := proxy.Stop(client); err != nil {
+			logger.LogError("Unable to stop the proxy container:\n%v", err)
+		}
 	},
 }
 
