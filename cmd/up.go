@@ -56,6 +56,7 @@ a reverse-proxy, determining to which container the request should go to.`,
 		if err := proxy.Start(client); err != nil {
 			logger.LogError("Unable to start the dnsmasq container:\n%v", err)
 		}
+
 	},
 }
 
