@@ -22,23 +22,41 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/Hawkbawk/falcon/lib/dnsmasq"
+	"github.com/Hawkbawk/falcon/lib/docker"
+	"github.com/Hawkbawk/falcon/lib/logger"
+	"github.com/Hawkbawk/falcon/lib/networking"
+	"github.com/Hawkbawk/falcon/lib/proxy"
 	"github.com/spf13/cobra"
 )
 
 // upCmd represents the up command
 var upCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Starts up the Traefik and dnsmasq container",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Sets up networking and starts the dnsmasq and proxy container",
+	Long: `falcon up sets up your local networking to point all requests to *.docker to resolve
+to localhost:80, and then starts the dnsmasq and proxy container.
+The proxy container (running Traefik) then takes these requests and acts as
+a reverse-proxy, determining to which container the request should go to.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hello world!")
+		if err := networking.Configure(); err != nil {
+			logger.LogError("Couldn't configure networking:\n%v", err)
+		}
+		client, err := docker.NewDockerClient()
+		if err != nil {
+			logger.LogError("Unable to connect to the Docker server:\n%v", err)
+		}
+
+		logger.LogInfo("Starting the dnsmasq container...")
+		if err := dnsmasq.Start(client); err != nil {
+			logger.LogError("Unable to start the dnsmasq container: \n%v", err)
+		}
+
+		logger.LogInfo("Starting the proxy container...")
+		if err := proxy.Start(client); err != nil {
+			logger.LogError("Unable to start the dnsmasq container:\n%v", err)
+		}
+
 	},
 }
 

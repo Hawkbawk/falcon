@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
@@ -33,15 +34,12 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "prox",
-	Short: "prox is your friendly local Docker development reverse-proxy",
-	Long: `prox is used as a local reverse-proxy for Docker development. It allows
+	Use:   "falcon",
+	Short: "falcon is your friendly local Docker development reverse-proxy",
+	Long: `falcon is used as a local reverse-proxy for Docker development. It allows
 you and your containers to reach each other using domain names like "your-app.docker".
 It allows for much easier development when using microservices, or even just two services
 that need to communicate.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -57,7 +55,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.prox.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.falcon.yaml)")
 	rootCmd.PersistentFlags()
 
 	// Cobra also supports local flags, which will only run
@@ -75,12 +73,13 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".prox" (without extension).
+		// Search config in home directory with name ".falcon" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".prox")
+		viper.SetConfigName(".falcon")
 	}
 
+	viper.SetEnvPrefix("FALCON")
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.

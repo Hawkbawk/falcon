@@ -19,10 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
 package main
 
-import "github.com/hawkbawk/prox/cmd"
+import "github.com/Hawkbawk/falcon/cmd"
 
+// Starts up falcon.
 func main() {
 	cmd.Execute()
 }
