@@ -40,7 +40,8 @@ var containerConfig *container.Config = &container.Config{
 var hostConfig *container.HostConfig = &container.HostConfig{
 	Binds: []string{
 		"/var/run/docker.sock:/var/run/docker.sock:ro",
-		"~/.falcon:/usr/src/app",
+		fmt.Sprintf("%v:%v/certs", certificatesDir, ProxyBaseDir),
+		fmt.Sprintf("%v:%v/dynamic.yml", dynamicConfigPath, ProxyBaseDir),
 	},
 	PortBindings: nat.PortMap{
 		"80": []nat.PortBinding{
