@@ -129,7 +129,7 @@ tls:
   certificates:
 	  ---- invalid yaml -----
 `
-			Expect(addFilesToConfig(hostname, []byte(testData))).NotTo(Succeed())
+			Expect(addFilesToConfig(hostname, []byte(testData))).Error().Should(HaveOccurred())
 		})
 	})
 
