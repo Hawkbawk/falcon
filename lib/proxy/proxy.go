@@ -11,9 +11,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const ProxyImageName = "hawkbawk/falcon-proxy"
-const ProxyContainerName = "falcon-proxy"
-const ProxyConfigDir = "/usr/src/app/config"
+const proxyImageName = "hawkbawk/falcon-proxy"
+const proxyContainerName = "falcon-proxy"
+const proxyConfigDir = "/usr/src/app/config"
 const defaultConfig = `
 # This is where falcon will add any info about any certificates that it creates for you.
 # Alternatively, you can put any info about your own certificates here.
@@ -27,7 +27,7 @@ var certificatesDir = fmt.Sprintf("%v/certs", configDir)
 var dynamicConfigPath = fmt.Sprintf("%v/dynamic.yml", configDir)
 
 var containerConfig *container.Config = &container.Config{
-	Image: ProxyImageName,
+	Image: proxyImageName,
 	ExposedPorts: nat.PortSet{
 		"80":  struct{}{},
 		"443": struct{}{},
@@ -46,7 +46,7 @@ var hostConfig *container.HostConfig = &container.HostConfig{
 		// certificates and dynamic config due to some fsnotify issues that happen
 		// when you mount specific files. This ensures Traefik picks up on our
 		// changes to the dynamic config.
-		fmt.Sprintf("%v:%v", configDir, ProxyConfigDir),
+		fmt.Sprintf("%v:%v", configDir, proxyConfigDir),
 	},
 	PortBindings: nat.PortMap{
 		"80": []nat.PortBinding{
@@ -77,12 +77,12 @@ type DynamicConfig struct {
 
 // Start starts up the falcon-proxy so that it can start forwarding requests.
 func Start(client docker.DockerClient) error {
-	return client.StartContainer(ProxyImageName, hostConfig, containerConfig, ProxyContainerName)
+	return client.StartContainer(proxyImageName, hostConfig, containerConfig, proxyContainerName)
 }
 
 // Stop stops the falcon-proxy container.
 func Stop(client docker.DockerClient) error {
-	return client.StopAndRemoveContainer(ProxyContainerName)
+	return client.StopAndRemoveContainer(proxyContainerName)
 }
 
 // EnableTlsForHost creates the certificate files necessary for the specified
@@ -144,8 +144,8 @@ func addFilesToConfig(hostname string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	certFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigDir, createCertFileName(hostname))
-	keyFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigDir, createKeyFileName(hostname))
+	certFilePath := fmt.Sprintf("%v/certs/%v", proxyConfigDir, createCertFileName(hostname))
+	keyFilePath := fmt.Sprintf("%v/certs/%v", proxyConfigDir, createKeyFileName(hostname))
 
 	config.Tls.Certificates = append(config.Tls.Certificates, TlsFilesConfig{CertFile: certFilePath, KeyFile: keyFilePath})
 

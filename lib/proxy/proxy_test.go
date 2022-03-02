@@ -25,14 +25,14 @@ var _ = Describe("Proxy", func() {
 
 	Describe("Start", func() {
 		It("tries to start the proxy container and returns no errors", func() {
-			mockClient.EXPECT().StartContainer(ProxyImageName, hostConfig, containerConfig, ProxyContainerName).Return(nil)
+			mockClient.EXPECT().StartContainer(proxyImageName, hostConfig, containerConfig, proxyContainerName).Return(nil)
 
 			Expect(Start(mockClient)).To(Succeed())
 		})
 
 		It("returns an error if the container can't be started", func() {
 			err := fmt.Errorf("problems!")
-			mockClient.EXPECT().StartContainer(ProxyImageName, hostConfig, containerConfig, ProxyContainerName).Return(err)
+			mockClient.EXPECT().StartContainer(proxyImageName, hostConfig, containerConfig, proxyContainerName).Return(err)
 
 			Expect(Start(mockClient)).To(Equal(err))
 		})
@@ -40,14 +40,14 @@ var _ = Describe("Proxy", func() {
 
 	Describe("Stop", func() {
 		It("tries to stop the proxy container and returns no errors", func() {
-			mockClient.EXPECT().StopAndRemoveContainer(ProxyContainerName).Return(nil)
+			mockClient.EXPECT().StopAndRemoveContainer(proxyContainerName).Return(nil)
 
 			Expect(Stop(mockClient)).To(Succeed())
 		})
 
 		It("returns an error if the container can't be stopped", func() {
 			err := fmt.Errorf("problems!")
-			mockClient.EXPECT().StopAndRemoveContainer(ProxyContainerName).Return(err)
+			mockClient.EXPECT().StopAndRemoveContainer(proxyContainerName).Return(err)
 
 			Expect(Stop(mockClient)).To(Equal(err))
 		})

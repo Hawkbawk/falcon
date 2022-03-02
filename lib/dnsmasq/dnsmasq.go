@@ -15,13 +15,13 @@ import (
 const LoopbackAddress = "192.168.40.1"
 
 // The name of the dnsmasq image we use.
-const DnsMasqImageName = "4km3/dnsmasq:2.85-r2"
+const dnsMasqImageName = "4km3/dnsmasq:2.85-r2"
 
 // The name of the dnsmasq container when it's running.
-const DnsMasqContainerName = "falcon-dnsmasq"
+const dnsMasqContainerName = "falcon-dnsmasq"
 
 var containerConfig *container.Config = &container.Config{
-	Image: DnsMasqImageName,
+	Image: dnsMasqImageName,
 	ExposedPorts: nat.PortSet{
 		"53/tcp": struct{}{},
 		"53/udp": struct{}{},
@@ -52,10 +52,10 @@ var hostConfig *container.HostConfig = &container.HostConfig{
 
 // Starts our dnsmasq container.
 func Start(client docker.DockerClient) error {
-	return client.StartContainer(DnsMasqImageName, hostConfig, containerConfig, DnsMasqContainerName)
+	return client.StartContainer(dnsMasqImageName, hostConfig, containerConfig, dnsMasqContainerName)
 }
 
 // Stops our dnsmasq container.
 func Stop(client docker.DockerClient) error {
-	return client.StopAndRemoveContainer(DnsMasqContainerName)
+	return client.StopAndRemoveContainer(dnsMasqContainerName)
 }
