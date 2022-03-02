@@ -22,14 +22,14 @@ var _ = Describe("Dnsmasq", func() {
 
 	Describe("Start", func() {
 		It("tries to start the dnsmasq container and returns no errors", func() {
-			mockClient.EXPECT().StartContainer(DnsMasqImageName, hostConfig, containerConfig, DnsMasqContainerName).Return(nil)
+			mockClient.EXPECT().StartContainer(dnsMasqImageName, hostConfig, containerConfig, dnsMasqContainerName).Return(nil)
 
 			Expect(Start(mockClient)).Should(Succeed())
 		})
 
 		It("returns an error if the container can't be started", func() {
 			err := fmt.Errorf("problems!")
-			mockClient.EXPECT().StartContainer(DnsMasqImageName, hostConfig, containerConfig, DnsMasqContainerName).Return(err)
+			mockClient.EXPECT().StartContainer(dnsMasqImageName, hostConfig, containerConfig, dnsMasqContainerName).Return(err)
 
 			Expect(Start(mockClient)).Should(Equal(err))
 		})
@@ -37,14 +37,14 @@ var _ = Describe("Dnsmasq", func() {
 
 	Describe("Stop", func() {
 		It("tries to stop the dnsmasq container and returns no errors", func() {
-			mockClient.EXPECT().StopAndRemoveContainer(DnsMasqContainerName).Return(nil)
+			mockClient.EXPECT().StopAndRemoveContainer(dnsMasqContainerName).Return(nil)
 
 			Expect(Stop(mockClient)).Should(Succeed())
 		})
 
 		It("returns an error if the container can't be stopped", func() {
 			err := fmt.Errorf("problems!")
-			mockClient.EXPECT().StopAndRemoveContainer(DnsMasqContainerName).Return(err)
+			mockClient.EXPECT().StopAndRemoveContainer(dnsMasqContainerName).Return(err)
 
 			Expect(Stop(mockClient)).Should(Equal(err))
 		})
