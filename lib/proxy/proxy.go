@@ -13,7 +13,7 @@ import (
 
 const ProxyImageName = "hawkbawk/falcon-proxy"
 const ProxyContainerName = "falcon-proxy"
-const ProxyConfigPath = "/usr/src/app/config"
+const ProxyConfigDir = "/usr/src/app/config"
 const defaultConfig = `
 # This is where falcon will add any info about any certificates that it creates for you.
 # Alternatively, you can put any info about your own certificates here.
@@ -22,9 +22,9 @@ tls:
   certificates:
 `
 
-var configPath = fmt.Sprintf("%v/.falcon", os.Getenv("HOME"))
-var certificatesDir = fmt.Sprintf("%v/certs", configPath)
-var dynamicConfigPath = fmt.Sprintf("%v/dynamic.yml", configPath)
+var configDir = fmt.Sprintf("%v/.falcon", os.Getenv("HOME"))
+var certificatesDir = fmt.Sprintf("%v/certs", configDir)
+var dynamicConfigPath = fmt.Sprintf("%v/dynamic.yml", configDir)
 
 var containerConfig *container.Config = &container.Config{
 	Image: ProxyImageName,
@@ -46,7 +46,7 @@ var hostConfig *container.HostConfig = &container.HostConfig{
 		// certificates and dynamic config due to some fsnotify issues that happen
 		// when you mount specific files. This ensures Traefik picks up on our
 		// changes to the dynamic config.
-		fmt.Sprintf("%v:%v", certificatesDir, ProxyConfigPath),
+		fmt.Sprintf("%v:%v", configDir, ProxyConfigDir),
 	},
 	PortBindings: nat.PortMap{
 		"80": []nat.PortBinding{
@@ -144,8 +144,8 @@ func addFilesToConfig(hostname string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	certFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigPath, createCertFileName(hostname))
-	keyFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigPath, createKeyFileName(hostname))
+	certFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigDir, createCertFileName(hostname))
+	keyFilePath := fmt.Sprintf("%v/certs/%v", ProxyConfigDir, createKeyFileName(hostname))
 
 	config.Tls.Certificates = append(config.Tls.Certificates, TlsFilesConfig{CertFile: certFilePath, KeyFile: keyFilePath})
 
