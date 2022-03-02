@@ -28,7 +28,8 @@ var dynamicConfigPath = fmt.Sprintf("%v/.falcon/dynamic.yml", os.Getenv("HOME"))
 var containerConfig *container.Config = &container.Config{
 	Image: ProxyImageName,
 	ExposedPorts: nat.PortSet{
-		"80": struct{}{},
+		"80":  struct{}{},
+		"443": struct{}{},
 	},
 	Labels: map[string]string{
 		"traefik.enable":                                         "true",
@@ -48,6 +49,12 @@ var hostConfig *container.HostConfig = &container.HostConfig{
 			{
 				HostIP:   "0.0.0.0",
 				HostPort: "80",
+			},
+		},
+		"443": []nat.PortBinding{
+			{
+				HostIP:   "0.0.0.0",
+				HostPort: "443",
 			},
 		},
 	},
