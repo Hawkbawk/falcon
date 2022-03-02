@@ -89,7 +89,15 @@ func Stop(client docker.DockerClient) error {
 // hostname in the falcon certs directory and adds them to the Traefik dynamic
 // config that gets mounted inside the falcon-proxy container.
 func EnableTlsForHost(hostname string) error {
-	if err := ensureDynamicConfig(); err != nil {
+	if err := ensureTlsConfig(); err != nil {
+		return err
+	}
+
+	// In an ideal world, we'd just be able to tell mkcert where
+	// we want the certificates, but due to a bug in mkcerts arg parsing code,
+	// we can't do that. That would be much easier to test, but this works for
+	// now.
+	if err := os.Chdir(certificatesDir); err != nil {
 		return err
 	}
 
@@ -116,18 +124,11 @@ func EnableTlsForHost(hostname string) error {
 	return nil
 }
 
-// createTlsFiles creates the key and cert file for the specified hostname
-// in the falcon directory.
+// createTlsFiles runs mkcert through the given command runner in order
+// to create certificate files for the given hostname. If the given
+// command runner actually runs points to a shell, then the files will
+// be created in the current working directory.
 func createTlsFiles(hostname string, cmdRunner func(string) error) error {
-
-	// In an ideal world, we'd just be able to tell mkcert where
-	// we want the certificates, but due to a bug in mkcerts arg parsing code,
-	// we can't do that. That would be much easier to test, but this works for
-	// now.
-	if err := os.Chdir(certificatesDir); err != nil {
-		return err
-	}
-
 	if err := cmdRunner(fmt.Sprintf("mkcert %v", hostname)); err != nil {
 		return err
 	}
@@ -164,9 +165,9 @@ func createKeyFileName(hostname string) string {
 	return fmt.Sprintf("%v-key.pem", hostname)
 }
 
-// ensureDynamicConfig ensures both that the certificates directory exists,
+// ensureTlsConfig ensures both that the certificates directory exists,
 // and that the Traefik dynamic config exists as well.
-func ensureDynamicConfig() error {
+func ensureTlsConfig() error {
 	if err := os.MkdirAll(certificatesDir, 0755); err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Hawkbawk/falcon/mocks/mock_docker"
 	"github.com/golang/mock/gomock"
@@ -71,13 +70,7 @@ var _ = Describe("Proxy", func() {
 		It("tries to call mkcert to make the certs in the right directory", func() {
 			Expect(createTlsFiles(hostname, cmdRunner)).To(Succeed())
 
-			currDir, err := os.Getwd()
-
-			if err != nil {
-				Fail("Unable to check current working directory to verify we're in the certificates directory.")
-			}
 			Expect(argList[0]).To(Equal(fmt.Sprintf("mkcert %v", hostname)))
-			Expect(currDir).To(Equal(certificatesDir))
 		})
 
 		It("returns an error if the command fails", func() {
